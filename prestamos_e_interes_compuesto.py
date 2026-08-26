@@ -94,6 +94,16 @@ def aplicar_estilos_base_excel(writer, df, titulo_resumen):
     worksheet["A1"].alignment = alineacion_centro
     
     return worksheet
+    worksheet.merge_cells("A1:E1") # Cambiamos de A1:E2 a A1:E1
+    worksheet["A1"] = titulo_resumen
+    worksheet["A1"].font = fuente_titulo 
+    worksheet["A1"].alignment = alineacion_centro
+
+    # 👇 Créditos en el Excel
+    worksheet.merge_cells("A2:E2")
+    worksheet["A2"] = "Generado - Desarrollado por [Freddy Beltrán]"
+    worksheet["A2"].font = Font(name="Segoe UI", color="A6A6A6", italic=True, size=10)
+    worksheet["A2"].alignment = Alignment(horizontal="right", vertical="center")
 
 def finalizar_excel(worksheet, ultima_fila):
     """Aplica tabla dinámica, anchos y estilos finales."""
@@ -236,6 +246,30 @@ elif opcion_menu == "💰 Ahorro / Inversión":
         plazo_ahorro = st.number_input("Plazo de Inversión (Años)", min_value=1, value=10, step=1)
         
     tipo_calculo = "Ahorro"
+
+# ==========================================
+# 4. INTERFAZ WEB CON STREAMLIT
+# ==========================================
+
+st.sidebar.title("⚙️ Menú Principal")
+st.sidebar.markdown("Elige el tipo de simulador:")
+opcion_menu = st.sidebar.radio(
+    "",
+    ["🏠 Préstamo Hipotecario", "🏢 Préstamo Comercial", "💰 Ahorro / Inversión"]
+)
+
+# 👇 AGREGA ESTE BLOQUE DE CÓDIGO AQUÍ 👇
+st.sidebar.markdown("---") # Línea divisoria
+st.sidebar.markdown("### 👨‍💻 Desarrollado por")
+st.sidebar.info(
+    """
+    Freddy Beltrán
+    Desarrollador  
+    
+   
+   # """
+)
+# 👆 FIN DEL BLOQUE DE CRÉDITOS 👆
 
 # ==========================================
 # 5. BOTÓN DE CÁLCULO Y RESULTADOS
