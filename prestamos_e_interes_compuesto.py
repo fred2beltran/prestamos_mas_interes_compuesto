@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
-st.set_page_config(page_title="Simulador Financiero", layout="centered", page_icon="🏦")
+st.set_page_config(page_title="Simulador Financiero 360", layout="centered", page_icon="🏦")
 
 # ==========================================
 # 1. LÓGICA DE NEGOCIO: PRÉSTAMOS
@@ -88,22 +88,19 @@ def aplicar_estilos_base_excel(writer, df, titulo_resumen):
         for cell in row:
             cell.fill = fondo_principal
 
-    worksheet.merge_cells("A1:E2")
+    # Título Principal
+    worksheet.merge_cells("A1:E1")
     worksheet["A1"] = titulo_resumen
     worksheet["A1"].font = fuente_titulo 
     worksheet["A1"].alignment = alineacion_centro
     
-    return worksheet
-    worksheet.merge_cells("A1:E1") # Cambiamos de A1:E2 a A1:E1
-    worksheet["A1"] = titulo_resumen
-    worksheet["A1"].font = fuente_titulo 
-    worksheet["A1"].alignment = alineacion_centro
-
-    # 👇 Créditos en el Excel
+    # Créditos impresos en el archivo Excel
     worksheet.merge_cells("A2:E2")
-    worksheet["A2"] = "Generado - Desarrollado por [Freddy Beltrán]"
+    worksheet["A2"] = "Generado por Simulador Financiero 360 - Desarrollado por [TU NOMBRE AQUÍ]"
     worksheet["A2"].font = Font(name="Segoe UI", color="A6A6A6", italic=True, size=10)
     worksheet["A2"].alignment = Alignment(horizontal="right", vertical="center")
+    
+    return worksheet
 
 def finalizar_excel(worksheet, ultima_fila):
     """Aplica tabla dinámica, anchos y estilos finales."""
@@ -182,9 +179,9 @@ def generar_excel_ahorro(df, capital_inicial, aporte_mensual):
         worksheet["B4"] = capital_inicial
         worksheet["B5"] = aporte_mensual
         worksheet["B6"] = f'={len(df)} & " meses"' 
-        worksheet["E4"] = f"=D{ultima_fila}"           # Última celda de Total Aportado
-        worksheet["E5"] = f"=SUM(C9:C{ultima_fila})"   # Suma de intereses
-        worksheet["E6"] = f"=E{ultima_fila}"           # Última celda de Saldo Final
+        worksheet["E4"] = f"=D{ultima_fila}"           
+        worksheet["E5"] = f"=SUM(C9:C{ultima_fila})"   
+        worksheet["E6"] = f"=E{ultima_fila}"           
         
         pintar_cajas_resumen(worksheet)
         for celda in ["B4", "B5", "E4", "E5", "E6"]: worksheet[celda].number_format = '$#,##0.00'
@@ -204,7 +201,18 @@ opcion_menu = st.sidebar.radio(
     ["🏠 Préstamo Hipotecario", "🏢 Préstamo Comercial", "💰 Ahorro / Inversión"]
 )
 
-# Variables globales para el botón de cálculo
+# --- CRÉDITOS DEL DESARROLLADOR ---
+st.sidebar.markdown("---") 
+st.sidebar.markdown("### 👨‍💻 Desarrollado por")
+st.sidebar.info(
+    """
+    **[TU NOMBRE AQUÍ]**  
+    Analista Financiero / Desarrollador  
+    
+    [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://tu-link-de-linkedin.com)
+    """
+)
+
 tipo_calculo = None
 df_resultado = None
 
@@ -248,47 +256,21 @@ elif opcion_menu == "💰 Ahorro / Inversión":
     tipo_calculo = "Ahorro"
 
 # ==========================================
-# 4. INTERFAZ WEB CON STREAMLIT
-# ==========================================
-
-st.sidebar.title("⚙️ Menú Principal")
-st.sidebar.markdown("Elige el tipo de simulador:")
-opcion_menu = st.sidebar.radio(
-    "",
-    ["🏠 Préstamo Hipotecario", "🏢 Préstamo Comercial", "💰 Ahorro / Inversión"]
-)
-
-# 👇 AGREGA ESTE BLOQUE DE CÓDIGO AQUÍ 👇
-st.sidebar.markdown("---") # Línea divisoria
-st.sidebar.markdown("### 👨‍💻 Desarrollado por")
-st.sidebar.info(
-    """
-    Freddy Beltrán
-    Desarrollador  
-    
-   
-   # """
-)
-# 👆 FIN DEL BLOQUE DE CRÉDITOS 👆
-
-# ==========================================
 # 5. BOTÓN DE CÁLCULO Y RESULTADOS
 # ==========================================
 st.markdown("---")
 if st.button("📊 Calcular y Generar Reporte"):
     
-    # Procesar Préstamos
     if tipo_calculo in ["Hipotecario", "Comercial"]:
         df_resultado = calcular_amortizacion(monto, tasa, plazo, sistema=sistema_elegido)
         primera_cuota = df_resultado.loc[0, "Cuota Mensual"]
         
         st.success(f"**{'Cuota Fija Mensual' if sistema_elegido == 'Francés' else 'Primera Cuota'}:** ${primera_cuota:,.2f}")
-        with st.expander("Ver tabla previa"): st.dataframe(df_resultado, use_container_width=True)
+        with st.expander("Ver tabla previa (Haz clic para expandir)"): st.dataframe(df_resultado, use_container_width=True)
         
         excel_binario = generar_excel_prestamo(df_resultado, tipo_calculo, sistema_elegido)
         st.download_button("📥 Descargar Excel", data=excel_binario, file_name=f"Prestamo_{tipo_calculo}.xlsx")
 
-    # Procesar Ahorros
     elif tipo_calculo == "Ahorro":
         df_resultado = calcular_ahorro_compuesto(capital_ini, aporte_mes, tasa_ahorro, plazo_ahorro)
         saldo_final = df_resultado.iloc[-1]["Saldo Final"]
@@ -298,7 +280,7 @@ if st.button("📊 Calcular y Generar Reporte"):
         col_res1.success(f"**Saldo Final Proyectado:** ${saldo_final:,.2f}")
         col_res2.info(f"**Total Intereses Ganados:** ${total_interes:,.2f}")
         
-        with st.expander("Ver tabla previa"): st.dataframe(df_resultado, use_container_width=True)
+        with st.expander("Ver tabla previa (Haz clic para expandir)"): st.dataframe(df_resultado, use_container_width=True)
         
         excel_binario = generar_excel_ahorro(df_resultado, capital_ini, aporte_mes)
         st.download_button("📥 Descargar Excel de Ahorro", data=excel_binario, file_name="Plan_Ahorro_Compuesto.xlsx")
