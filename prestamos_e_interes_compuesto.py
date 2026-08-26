@@ -206,10 +206,9 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 👨‍💻 Desarrollado por")
 st.sidebar.info(
     """
-    **[TU NOMBRE AQUÍ]**  
-    Analista Financiero / Desarrollador  
-    
-    [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://tu-link-de-linkedin.com)
+    **[Freddy Beltrán A.]**  
+       Desarrollador  
+
     """
 )
 
