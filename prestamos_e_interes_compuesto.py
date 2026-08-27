@@ -232,7 +232,6 @@ def generar_excel_ahorro(
 
 def mostrar_tabla(datos: pd.DataFrame) -> None:
     with st.expander("Ver tabla previa"):
-        st.dataframe(datos, use_container_width=True, hide_index=True)
         columnas_moneda = [columna for columna in datos.columns if columna != "Mes"]
         formatos = {columna: "${:,.2f}" for columna in columnas_moneda}
         st.dataframe(
@@ -255,7 +254,25 @@ def aplicar_estilos() -> None:
             padding: 16px;
         }
         [data-testid="stMetricLabel"] {color: #a9b7cc;}
-        [data-testid="stMetricValue"] {color: #f8fafc;}
+        [data-testid="stMetric"],
+        [data-testid="stMetric"] * {box-sizing: border-box; min-width: 0;}
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] * {
+            white-space: normal;
+            overflow: visible;
+            overflow-wrap: anywhere;
+            text-overflow: clip;
+        }
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricValue"] * {
+            color: #f8fafc;
+            font-size: clamp(1.1rem, 2.5vw, 1.65rem);
+            line-height: 1.3;
+            white-space: normal;
+            overflow: visible;
+            overflow-wrap: anywhere;
+            text-overflow: clip;
+        }
         div[data-testid="stForm"] {
             border: 1px solid #26344d;
             border-radius: 16px;
@@ -298,9 +315,10 @@ def mostrar_analisis_prestamo(
     costo_porcentual = total_intereses / monto if monto else 0
 
     st.subheader("Resumen para decidir")
-    metrica_1, metrica_2, metrica_3, metrica_4 = st.columns(4)
+    metrica_1, metrica_2 = st.columns(2)
     metrica_1.metric("Cuota inicial", f"${primera_cuota:,.2f}")
     metrica_2.metric("Intereses totales", f"${total_intereses:,.2f}")
+    metrica_3, metrica_4 = st.columns(2)
     metrica_3.metric("Total a pagar", f"${total_pagado:,.2f}")
     metrica_4.metric("Costo financiero", f"{costo_porcentual:.1%}")
 
@@ -376,9 +394,10 @@ def mostrar_analisis_ahorro(
     rentabilidad = intereses / total_aportado if total_aportado else 0
 
     st.subheader("Resumen para decidir")
-    metrica_1, metrica_2, metrica_3, metrica_4 = st.columns(4)
+    metrica_1, metrica_2 = st.columns(2)
     metrica_1.metric("Saldo proyectado", f"${saldo_final:,.2f}")
     metrica_2.metric("Total aportado", f"${total_aportado:,.2f}")
+    metrica_3, metrica_4 = st.columns(2)
     metrica_3.metric("Ganancia estimada", f"${intereses:,.2f}")
     metrica_4.metric("Ganancia / aportes", f"{rentabilidad:.1%}")
 
