@@ -62,12 +62,12 @@ def calcular_ahorro_compuesto(capital_inicial, aporte_mensual, tasa_anual, anios
         total_aportado += aporte_mensual
         
         tabla.append({
-            "Mes": mes,
-            "Aporte Mensual": round(aporte_mensual, 2),
-            "Interés del Mes": round(interes_ganado, 2),
-            "Total Aportado": round(total_aportado, 2),
-            "Saldo Final": round(saldo, 2)
-        })
+        "Mes": mes,
+        "Cuota Mensual": cuota_mensual,
+        "Pago Interés": pago_interes,
+        "Pago Capital": pago_capital,
+        "Saldo Restante": max(0, saldo_restante)
+    })
 
     return pd.DataFrame(tabla)
 
@@ -96,7 +96,7 @@ def aplicar_estilos_base_excel(writer, df, titulo_resumen):
     
     # Créditos impresos en el archivo Excel
     worksheet.merge_cells("A2:E2")
-    worksheet["A2"] = "Generado por Simulador Financiero 360 - Desarrollado por [TU NOMBRE AQUÍ]"
+    worksheet["A2"] = "Generado ZoraEC - Desarrollado por Freddy Beltrán A. (2026)"
     worksheet["A2"].font = Font(name="Segoe UI", color="A6A6A6", italic=True, size=10)
     worksheet["A2"].alignment = Alignment(horizontal="right", vertical="center")
     
@@ -203,7 +203,7 @@ opcion_menu = st.sidebar.radio(
 
 # --- CRÉDITOS DEL DESARROLLADOR ---
 st.sidebar.markdown("---") 
-st.sidebar.markdown("### 👨‍💻 Desarrollado por")
+st.sidebar.markdown("### 👨‍💻 creado por ZoraEC")
 st.sidebar.info(
     """
     **[Freddy Beltrán A.]**  
