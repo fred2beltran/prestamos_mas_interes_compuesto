@@ -8,6 +8,13 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
+# Identidad del producto: actualizar aquí en cada nueva entrega.
+MARCA = "ZoraEC"
+NOMBRE_PRODUCTO = "Simulador Financiero 360"
+VERSION = "1.0.0"
+AUTOR = "Freddy Beltrán A."
+ANIO_LANZAMIENTO = "2026"
+
 Sistema = Literal["Francés", "Alemán"]
 FORMATO_MONEDA = "$#,##0.00"
 FILA_ENCABEZADO = 8
@@ -135,7 +142,15 @@ def crear_reporte_excel(
         hoja["A1"].alignment = Alignment(horizontal="center", vertical="center")
 
         hoja.merge_cells("A2:E2")
-        hoja["A2"] = "Generado por ZoraEC · Desarrollado por Freddy Beltrán A. (2026)"
+        hoja["A2"] = f"{MARCA} | {NOMBRE_PRODUCTO} | v{VERSION}"
+        hoja["A2"].alignment = Alignment(horizontal="right", vertical="center")
+        hoja.merge_cells("A3:E3")
+        hoja["A3"] = f"Diseño y desarrollo: {AUTOR} · {ANIO_LANZAMIENTO}"
+        hoja["A3"].font = Font(name="Segoe UI", color="A6A6A6", size=10)
+        hoja["A3"].alignment = Alignment(horizontal="right", vertical="center")
+        hoja.parent.properties.creator = AUTOR
+        hoja.parent.properties.title = f"{MARCA} | {NOMBRE_PRODUCTO}"
+        hoja.parent.properties.description = f"Reporte generado con la versión {VERSION}"
         hoja["A2"].font = Font(name="Segoe UI", color="A6A6A6", italic=True, size=10)
         hoja["A2"].alignment = Alignment(horizontal="right", vertical="center")
 
@@ -545,18 +560,22 @@ def mostrar_ahorro() -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Simulador Financiero 360",
+        page_title=f"{MARCA} | {NOMBRE_PRODUCTO}",
         layout="centered",
         page_icon="🏦",
     )
     aplicar_estilos()
-    st.sidebar.title("⚙️ Menú Principal")
+    st.sidebar.title(MARCA)
+    st.sidebar.caption(NOMBRE_PRODUCTO)
+    st.sidebar.caption(f"Versión {VERSION}")
+    st.sidebar.divider()
     opcion = st.sidebar.radio(
         "Elige el tipo de simulador:", [*PRESTAMOS, "💰 Ahorro / Inversión"]
     )
     st.sidebar.divider()
-    st.sidebar.markdown("### 👨‍💻 Creado por ZoraEC")
-    st.sidebar.info("**Freddy Beltrán A.**  \nDesarrollador")
+    st.sidebar.markdown("**Diseño y desarrollo**")
+    st.sidebar.caption(AUTOR)
+    st.sidebar.caption(f"{MARCA} · {ANIO_LANZAMIENTO}")
 
     if opcion in PRESTAMOS:
         mostrar_prestamo(PRESTAMOS[opcion])
