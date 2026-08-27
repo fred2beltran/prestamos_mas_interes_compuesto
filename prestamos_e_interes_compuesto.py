@@ -84,7 +84,7 @@ def aplicar_estilos_base_excel(writer, df, titulo_resumen):
     alineacion_centro = Alignment(horizontal="center", vertical="center")
     
     worksheet.sheet_view.showGridLines = False
-    for row in worksheet.iter_rows(min_row=1, max_row=7, min_col=1, max_col=6):
+    for row in worksheet.iter_rows(min_row=1, max_row=7, min_col=1, max_col=5):
         for cell in row:
             cell.fill = fondo_principal
 
