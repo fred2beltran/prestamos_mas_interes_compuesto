@@ -231,7 +231,7 @@ def generar_excel_ahorro(
 
 
 def mostrar_tabla(datos: pd.DataFrame) -> None:
-    with st.expander("Ver tabla previa"):
+    with st.expander("Ver tabla previa", expanded=False):
         columnas_moneda = [columna for columna in datos.columns if columna != "Mes"]
         formatos = {columna: "${:,.2f}" for columna in columnas_moneda}
         st.dataframe(
@@ -286,6 +286,18 @@ def aplicar_estilos() -> None:
             margin: 8px 0 18px 0;
         }
         .decision-box small {color: #a9b7cc;}
+        /* El estado nativo de details cambia el signo sin ejecutar Python. */
+        [data-testid="stExpander"] details > summary::before {
+            content: "+";
+            font-size: 1.25rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            width: 1.25rem;
+            text-align: center;
+        }
+        [data-testid="stExpander"] details[open] > summary::before {
+            content: "−";
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -322,30 +334,30 @@ def mostrar_analisis_prestamo(
     metrica_3.metric("Total a pagar", f"${total_pagado:,.2f}")
     metrica_4.metric("Costo financiero", f"{costo_porcentual:.1%}")
 
-    if ingreso_mensual > 0:
-        carga = cuota_referencia / ingreso_mensual
-        st.markdown("#### Capacidad de pago")
-        st.progress(min(carga, 1.0), text=f"La cuota representa {carga:.1%} del ingreso mensual")
-        if carga <= 0.30:
-            st.success("La carga estimada está dentro del umbral de referencia del 30 %.")
-        elif carga <= 0.40:
-            st.warning("La carga supera el 30 %. Conviene revisar gastos y margen de emergencia.")
+    with st.expander("Capacidad de pago", expanded=False):
+        if ingreso_mensual > 0:
+            carga = cuota_referencia / ingreso_mensual
+            st.progress(min(carga, 1.0), text=f"La cuota representa {carga:.1%} del ingreso mensual")
+            if carga <= 0.30:
+                st.success("La carga estimada está dentro del umbral de referencia del 30 %.")
+            elif carga <= 0.40:
+                st.warning("La carga supera el 30 %. Conviene revisar gastos y margen de emergencia.")
+            else:
+                st.error("La carga supera el 40 % del ingreso y podría limitar la liquidez mensual.")
         else:
-            st.error("La carga supera el 40 % del ingreso y podría limitar la liquidez mensual.")
-    else:
-        st.info("Ingresa tus ingresos mensuales para evaluar la capacidad de pago.")
+            st.info("Ingresa tus ingresos mensuales para evaluar la capacidad de pago.")
 
-    st.markdown("#### Evolución de la deuda")
-    grafico_saldo = datos.set_index("Mes")[["Saldo Restante"]]
-    st.area_chart(grafico_saldo, color=["#4DA8DA"], use_container_width=True)
+    with st.expander("Evolución de la deuda", expanded=False):
+        grafico_saldo = datos.set_index("Mes")[["Saldo Restante"]]
+        st.area_chart(grafico_saldo, color=["#4DA8DA"], use_container_width=True)
 
-    st.markdown("#### Composición de cada cuota")
-    grafico_cuota = datos.set_index("Mes")[["Pago Capital", "Pago Interés"]]
-    st.area_chart(
-        grafico_cuota,
-        color=["#35C48D", "#F4B740"],
-        use_container_width=True,
-    )
+    with st.expander("Composición de cada cuota", expanded=False):
+        grafico_cuota = datos.set_index("Mes")[["Pago Capital", "Pago Interés"]]
+        st.area_chart(
+            grafico_cuota,
+            color=["#35C48D", "#F4B740"],
+            use_container_width=True,
+        )
 
 
 def mostrar_comparacion_sistemas(
@@ -366,7 +378,7 @@ def mostrar_comparacion_sistemas(
         comparacion["Intereses totales"].idxmin(), "Sistema"
     ]
 
-    with st.expander("Comparar sistema francés y alemán", expanded=True):
+    with st.expander("Comparar sistema francés y alemán", expanded=False):
         st.dataframe(
             comparacion.style.format({
                 "Primera cuota": "${:,.2f}",
@@ -401,23 +413,26 @@ def mostrar_analisis_ahorro(
     metrica_3.metric("Ganancia estimada", f"${intereses:,.2f}")
     metrica_4.metric("Ganancia / aportes", f"{rentabilidad:.1%}")
 
-    if meta > 0:
-        cumplimiento = saldo_final / meta
-        st.markdown("#### Cumplimiento de la meta")
-        st.progress(min(cumplimiento, 1.0), text=f"Proyección: {cumplimiento:.1%} de la meta")
-        diferencia = saldo_final - meta
-        if diferencia >= 0:
-            st.success(f"La proyección supera la meta por ${diferencia:,.2f}.")
-        else:
-            st.warning(f"Faltarían ${abs(diferencia):,.2f} para alcanzar la meta.")
+    with st.expander("Cumplimiento de la meta", expanded=False):
+        if meta > 0:
+            cumplimiento = saldo_final / meta
+            st.progress(min(cumplimiento, 1.0), text=f"Proyección: {cumplimiento:.1%} de la meta")
+            diferencia = saldo_final - meta
+            if diferencia >= 0:
+                st.success(f"La proyección supera la meta por ${diferencia:,.2f}.")
+            else:
+                st.warning(f"Faltarían ${abs(diferencia):,.2f} para alcanzar la meta.")
 
-    grafico = datos.set_index("Mes")[["Total Aportado", "Saldo Final"]]
-    st.markdown("#### Aportes frente al crecimiento acumulado")
-    st.line_chart(
-        grafico,
-        color=["#A9B7CC", "#35C48D"],
-        use_container_width=True,
-    )
+        else:
+            st.info("Ingresa una meta financiera para evaluar su cumplimiento.")
+
+    with st.expander("Aportes frente al crecimiento acumulado", expanded=False):
+        grafico = datos.set_index("Mes")[["Total Aportado", "Saldo Final"]]
+        st.line_chart(
+            grafico,
+            color=["#A9B7CC", "#35C48D"],
+            use_container_width=True,
+        )
 
     if capital_inicial == 0 and total_aportado == 0:
         st.info("Agrega capital o aportes mensuales para obtener una proyección útil.")
