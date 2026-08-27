@@ -233,11 +233,184 @@ def generar_excel_ahorro(
 def mostrar_tabla(datos: pd.DataFrame) -> None:
     with st.expander("Ver tabla previa"):
         st.dataframe(datos, use_container_width=True, hide_index=True)
+        columnas_moneda = [columna for columna in datos.columns if columna != "Mes"]
+        formatos = {columna: "${:,.2f}" for columna in columnas_moneda}
+        st.dataframe(
+            datos.style.format(formatos),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+def aplicar_estilos() -> None:
+    """Aplica una identidad visual ligera sin depender de paquetes externos."""
+    st.markdown(
+        """
+        <style>
+        .block-container {padding-top: 2rem; padding-bottom: 3rem;}
+        [data-testid="stMetric"] {
+            background: linear-gradient(145deg, #162033, #111827);
+            border: 1px solid #26344d;
+            border-radius: 14px;
+            padding: 16px;
+        }
+        [data-testid="stMetricLabel"] {color: #a9b7cc;}
+        [data-testid="stMetricValue"] {color: #f8fafc;}
+        div[data-testid="stForm"] {
+            border: 1px solid #26344d;
+            border-radius: 16px;
+            padding: 1.25rem;
+        }
+        .decision-box {
+            background: linear-gradient(135deg, #132238, #172033);
+            border-left: 4px solid #4da8da;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 8px 0 18px 0;
+        }
+        .decision-box small {color: #a9b7cc;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def tarjeta_contexto(titulo: str, texto: str) -> None:
+    st.markdown(
+        f'<div class="decision-box"><strong>{titulo}</strong><br>'
+        f'<small>{texto}</small></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def mostrar_analisis_prestamo(
+    datos: pd.DataFrame,
+    monto: float,
+    ingreso_mensual: float,
+    sistema: Sistema,
+) -> None:
+    primera_cuota = float(datos.iloc[0]["Cuota Mensual"])
+    cuota_referencia = primera_cuota if sistema == "Alemán" else float(
+        datos["Cuota Mensual"].mean()
+    )
+    total_intereses = float(datos["Pago Interés"].sum())
+    total_pagado = float(datos["Cuota Mensual"].sum())
+    costo_porcentual = total_intereses / monto if monto else 0
+
+    st.subheader("Resumen para decidir")
+    metrica_1, metrica_2, metrica_3, metrica_4 = st.columns(4)
+    metrica_1.metric("Cuota inicial", f"${primera_cuota:,.2f}")
+    metrica_2.metric("Intereses totales", f"${total_intereses:,.2f}")
+    metrica_3.metric("Total a pagar", f"${total_pagado:,.2f}")
+    metrica_4.metric("Costo financiero", f"{costo_porcentual:.1%}")
+
+    if ingreso_mensual > 0:
+        carga = cuota_referencia / ingreso_mensual
+        st.markdown("#### Capacidad de pago")
+        st.progress(min(carga, 1.0), text=f"La cuota representa {carga:.1%} del ingreso mensual")
+        if carga <= 0.30:
+            st.success("La carga estimada está dentro del umbral de referencia del 30 %.")
+        elif carga <= 0.40:
+            st.warning("La carga supera el 30 %. Conviene revisar gastos y margen de emergencia.")
+        else:
+            st.error("La carga supera el 40 % del ingreso y podría limitar la liquidez mensual.")
+    else:
+        st.info("Ingresa tus ingresos mensuales para evaluar la capacidad de pago.")
+
+    st.markdown("#### Evolución de la deuda")
+    grafico_saldo = datos.set_index("Mes")[["Saldo Restante"]]
+    st.area_chart(grafico_saldo, color=["#4DA8DA"], use_container_width=True)
+
+    st.markdown("#### Composición de cada cuota")
+    grafico_cuota = datos.set_index("Mes")[["Pago Capital", "Pago Interés"]]
+    st.area_chart(
+        grafico_cuota,
+        color=["#35C48D", "#F4B740"],
+        use_container_width=True,
+    )
+
+
+def mostrar_comparacion_sistemas(
+    monto: float, tasa: float, plazo: int, sistema_actual: Sistema
+) -> None:
+    alternativo: Sistema = "Alemán" if sistema_actual == "Francés" else "Francés"
+    actual = calcular_amortizacion(monto, tasa, plazo, sistema_actual)
+    otro = calcular_amortizacion(monto, tasa, plazo, alternativo)
+    comparacion = pd.DataFrame({
+        "Sistema": [sistema_actual, alternativo],
+        "Primera cuota": [actual.iloc[0]["Cuota Mensual"], otro.iloc[0]["Cuota Mensual"]],
+        "Última cuota": [actual.iloc[-1]["Cuota Mensual"], otro.iloc[-1]["Cuota Mensual"]],
+        "Intereses totales": [actual["Pago Interés"].sum(), otro["Pago Interés"].sum()],
+        "Total a pagar": [actual["Cuota Mensual"].sum(), otro["Cuota Mensual"].sum()],
+    })
+    ahorro = abs(comparacion.loc[0, "Intereses totales"] - comparacion.loc[1, "Intereses totales"])
+    sistema_menor_interes = comparacion.loc[
+        comparacion["Intereses totales"].idxmin(), "Sistema"
+    ]
+
+    with st.expander("Comparar sistema francés y alemán", expanded=True):
+        st.dataframe(
+            comparacion.style.format({
+                "Primera cuota": "${:,.2f}",
+                "Última cuota": "${:,.2f}",
+                "Intereses totales": "${:,.2f}",
+                "Total a pagar": "${:,.2f}",
+            }),
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.caption(
+            f"El sistema {sistema_menor_interes} genera aproximadamente "
+            f"${ahorro:,.2f} menos en intereses para estos parámetros."
+        )
+
+
+def mostrar_analisis_ahorro(
+    datos: pd.DataFrame,
+    capital_inicial: float,
+    meta: float,
+) -> None:
+    saldo_final = float(datos.iloc[-1]["Saldo Final"])
+    total_aportado = float(datos.iloc[-1]["Total Aportado"])
+    intereses = saldo_final - total_aportado
+    rentabilidad = intereses / total_aportado if total_aportado else 0
+
+    st.subheader("Resumen para decidir")
+    metrica_1, metrica_2, metrica_3, metrica_4 = st.columns(4)
+    metrica_1.metric("Saldo proyectado", f"${saldo_final:,.2f}")
+    metrica_2.metric("Total aportado", f"${total_aportado:,.2f}")
+    metrica_3.metric("Ganancia estimada", f"${intereses:,.2f}")
+    metrica_4.metric("Ganancia / aportes", f"{rentabilidad:.1%}")
+
+    if meta > 0:
+        cumplimiento = saldo_final / meta
+        st.markdown("#### Cumplimiento de la meta")
+        st.progress(min(cumplimiento, 1.0), text=f"Proyección: {cumplimiento:.1%} de la meta")
+        diferencia = saldo_final - meta
+        if diferencia >= 0:
+            st.success(f"La proyección supera la meta por ${diferencia:,.2f}.")
+        else:
+            st.warning(f"Faltarían ${abs(diferencia):,.2f} para alcanzar la meta.")
+
+    grafico = datos.set_index("Mes")[["Total Aportado", "Saldo Final"]]
+    st.markdown("#### Aportes frente al crecimiento acumulado")
+    st.line_chart(
+        grafico,
+        color=["#A9B7CC", "#35C48D"],
+        use_container_width=True,
+    )
+
+    if capital_inicial == 0 and total_aportado == 0:
+        st.info("Agrega capital o aportes mensuales para obtener una proyección útil.")
 
 
 def mostrar_prestamo(config: ConfiguracionPrestamo) -> None:
     st.title(f"{config.icono} Simulador {config.nombre}")
     st.markdown(config.descripcion)
+    tarjeta_contexto(
+        config.descripcion,
+        "Evalúa la cuota, el costo total y su peso sobre tus ingresos antes de decidir.",
+    )
 
     with st.form(f"formulario_{config.nombre.lower()}"):
         columna_1, columna_2, columna_3 = st.columns(3)
@@ -257,6 +430,13 @@ def mostrar_prestamo(config: ConfiguracionPrestamo) -> None:
                 ["Francés", "Alemán"],
                 horizontal=True,
             )
+        ingreso_mensual = st.number_input(
+            "Ingreso mensual disponible ($)",
+            min_value=0.0,
+            value=2_500.0,
+            step=100.0,
+            help="Se usa únicamente para estimar qué porcentaje del ingreso representa la cuota.",
+        )
         calcular = st.form_submit_button("📊 Calcular y Generar Reporte")
 
     if not calcular:
@@ -265,6 +445,9 @@ def mostrar_prestamo(config: ConfiguracionPrestamo) -> None:
     datos = calcular_amortizacion(monto, tasa, plazo, sistema)
     etiqueta = "Cuota Fija Mensual" if sistema == "Francés" else "Primera Cuota"
     st.success(f"**{etiqueta}:** ${datos.iloc[0]['Cuota Mensual']:,.2f}")
+    mostrar_analisis_prestamo(datos, monto, ingreso_mensual, sistema)
+    if config.permite_elegir_sistema:
+        mostrar_comparacion_sistemas(monto, tasa, plazo, sistema)
     mostrar_tabla(datos)
     st.download_button(
         "📥 Descargar Excel",
@@ -277,6 +460,10 @@ def mostrar_prestamo(config: ConfiguracionPrestamo) -> None:
 def mostrar_ahorro() -> None:
     st.title("💰 Simulador de Ahorro e Inversión")
     st.markdown("Descubre cómo crece tu dinero usando el **interés compuesto**.")
+    tarjeta_contexto(
+        "Convierte aportes periódicos en una proyección de patrimonio.",
+        "Compara lo aportado con la ganancia estimada y verifica si alcanzarías tu meta.",
+    )
 
     with st.form("formulario_ahorro"):
         columna_1, columna_2 = st.columns(2)
@@ -292,6 +479,13 @@ def mostrar_ahorro() -> None:
         plazo = columna_2.number_input(
             "Plazo de Inversión (Años)", min_value=1, value=10, step=1
         )
+        meta = st.number_input(
+            "Meta financiera ($)",
+            min_value=0.0,
+            value=40_000.0,
+            step=1_000.0,
+            help="Se utiliza para medir el cumplimiento de tu objetivo al finalizar el plazo.",
+        )
         calcular = st.form_submit_button("📊 Calcular y Generar Reporte")
 
     if not calcular:
@@ -305,6 +499,7 @@ def mostrar_ahorro() -> None:
     columna_2.info(
         f"**Total Intereses Ganados:** ${datos['Interés del Mes'].sum():,.2f}"
     )
+    mostrar_analisis_ahorro(datos, capital, meta)
     mostrar_tabla(datos)
     st.download_button(
         "📥 Descargar Excel de Ahorro",
@@ -320,6 +515,7 @@ def main() -> None:
         layout="centered",
         page_icon="🏦",
     )
+    aplicar_estilos()
     st.sidebar.title("⚙️ Menú Principal")
     opcion = st.sidebar.radio(
         "Elige el tipo de simulador:", [*PRESTAMOS, "💰 Ahorro / Inversión"]
